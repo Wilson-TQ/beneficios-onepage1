@@ -113,34 +113,33 @@ function Home(){
   /* FAB recargar */
   const fab = `
     <button class="fab" id="refreshBtn" aria-label="Recargar" title="Recargar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 12a9 9 0 0 1-9 9A9 9 0 1 1 7.5 4.5" />
-        <polyline points="21 3 21 12 12 12" />
-      </svg>
+      <img src="assets/img/recarga_flecha.png" alt="Recargar">
     </button>
   `;
+
 
   return `<main class="app">${header}${profile}${tabs}<div class="content">${list}</div>${modals}${fab}</main>`;
 }
 
 /* ---------- LISTAS ---------- */
 function Content(){
+  // si por alguna razón llaman a Content con usuario inactivo, no mostramos nada
+  if (!state.user?.activo) return '';
+
   const u = state.user;
   const d = state.data;
 
   if(state.tab === 'beneficios'){
     const items = d.beneficios.filter(x => x.dni === u.dni);
-    if(items.length === 0) return '<p>No tienes beneficios asignados aún.</p>';
+    // Si no hay items, no mostramos mensaje
     return items.map(x => Card(x)).join('');
   }
   if(state.tab === 'cupones'){
     const items = d.cupones.filter(x => x.dni === u.dni);
-    if(items.length === 0) return '<p>No tienes cupones.</p>';
     return items.map(x => Card(x, true)).join('');
   }
   if(state.tab === 'movimientos'){
     const items = d.movimientos.filter(x => x.dni === u.dni);
-    if(items.length === 0) return '<p>Aún no hay movimientos.</p>';
     return items.map(x => `
       <div class="card">
         <img src="assets/img/coupon.jpg" alt="">
@@ -154,6 +153,7 @@ function Content(){
   }
   return '';
 }
+
 
 /* Tarjeta clickable:
    - NO se muestra el código.
@@ -253,7 +253,6 @@ function attachEvents(){
       try{
         const data = await DataAPI.loadMock(); // en real → DataAPI.getAsignaciones(state.user.dni)
         state.data = data;
-        // Mantener tab actual
         document.querySelector('.content').innerHTML = Content();
         attachCardClicks();
       }finally{
@@ -261,6 +260,7 @@ function attachEvents(){
       }
     });
   }
+
 
   // modales: cerrar
   const backdrop = document.getElementById('backdrop');
