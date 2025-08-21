@@ -1,0 +1,84 @@
+{
+  "users": [
+    {
+      "dni": "46416788",
+      "password": "1234",
+      "activo": true,
+      "nombres": "MARIO ANDRÉS",
+      "apellidos": "BAZARTE QUINTEROS",
+      "empresa": "DON TORIBIO SAC",
+      "area": "OPERACIONES",
+      "foto": "assets/img/avatar.jpg",
+      "nivel": "Gold"
+    },
+    {
+      "dni": "11111111",
+      "password": "1234",
+      "activo": false,
+      "nombres": "USUARIO",
+      "apellidos": "INACTIVO",
+      "empresa": "DON TORIBIO SAC",
+      "area": "OPERACIONES",
+      "foto": "assets/img/avatar.jpg",
+      "nivel": "Silver"
+    }
+  ],
+  "beneficios": [
+    {
+      "dni": "46416788",
+      "tipo": "beneficio",
+      "titulo": "Descuento 10% en Menú Ejecutivo",
+      "codigo": "DT-10-MENU",
+      "descripcion": "Válido de Lun a Vie en salón.",
+      "imagen": "assets/img/benefit.jpg"
+    },
+    {
+      "dni": "46416788",
+      "tipo": "beneficio",
+      "titulo": "Café de cortesía",
+      "codigo": "DT-CAFE",
+      "descripcion": "1 por día presentando tu código.",
+      "imagen": "assets/img/benefit.jpg"
+    }
+  ],
+  "cupones": [
+    {
+      "dni": "46416788",
+      "tipo": "cupon",
+      "titulo": "2x1 Chicharrón Sat",
+      "codigo": "DT-2X1-CHIC",
+      "vence": "2025-09-05",
+      "restricciones": "Solo sábados, 12:00-16:00",
+      "imagen": "assets/img/coupon.jpg",
+      "estado": "Vigente"
+    },
+    {
+      "dni": "46416788",
+      "tipo": "cupon",
+      "titulo": "Bebida gratis",
+      "codigo": "DT-BEBIDA",
+      "vence": "2025-08-16",
+      "restricciones": "Solo en salón",
+      "imagen": "assets/img/coupon.jpg",
+      "estado": "Vencido"
+    }
+  ],
+  "movimientos": [
+    {
+      "dni": "46416788",
+      "tipo": "uso",
+      "titulo": "2x1 Chicharrón Sat",
+      "codigo": "DT-2X1-CHIC",
+      "fecha_uso": "2025-08-20 17:15",
+      "resultado": "Canje exitoso"
+    },
+    {
+      "dni": "46416788",
+      "tipo": "uso",
+      "titulo": "Bebida gratis",
+      "codigo": "DT-BEBIDA",
+      "fecha_uso": "2025-08-14 17:15",
+      "resultado": "Cupón vencido"
+    }
+  ]
+}
