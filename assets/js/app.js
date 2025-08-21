@@ -19,6 +19,7 @@ function render(){
   attachEvents();
 }
 
+/* ---------------- LOGIN ---------------- */
 function Login(){
   return `
   <section class="login">
@@ -50,6 +51,7 @@ function Login(){
   </section>`;
 }
 
+/* ---------------- HOME ---------------- */
 function Home(){
   const u = state.user;
   const activo = !!u.activo;
@@ -71,7 +73,6 @@ function Home(){
       <div class="dni">${u.dni}</div>
       <div class="company">${u.empresa}</div>
       <div class="area">${u.area}</div>
-      <div class="badge">Nivel: ${u.nivel || '—'}</div>
       ${activo ? '' : '<div class="inactive-banner">USUARIO INACTIVO</div>'}
     </div>
   `;
@@ -85,8 +86,10 @@ function Home(){
 
   const list = activo ? Content() : '';
 
+  /* Modales (config + detalle) y backdrop */
   const modals = `
     <div id="backdrop" class="modal-backdrop"></div>
+
     <div id="configModal" class="modal">
       <h3>Configuración</h3>
       <p>Opciones para el usuario</p>
@@ -95,13 +98,32 @@ function Home(){
       <button class="btn close" id="closeConfig">Cerrar</button>
       <!-- TODO: Reemplazar los href anteriores por los enlaces de Zoho Forms -->
     </div>
+
+    <div id="itemModal" class="modal detail">
+      <h3 id="itemTitle">Título</h3>
+      <div class="status" id="itemStatus"></div>
+      <div class="code-pill" id="itemCode" title="Toca para copiar"></div>
+      <div class="terms-wrap">
+        <div class="terms" id="itemTerms"></div>
+      </div>
+      <button class="btn close" id="closeItem">Cerrar</button>
+    </div>
   `;
 
-  return `<main class="app">${header}${profile}${tabs}<div class="content">${list}</div>${modals}
-            <div class="footer-cta"><button class="btn" id="bigMovs">MOVIMIENTOS</button></div>
-          </main>`;
+  /* FAB recargar */
+  const fab = `
+    <button class="fab" id="refreshBtn" aria-label="Recargar" title="Recargar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 0 1-9 9A9 9 0 1 1 7.5 4.5" />
+        <polyline points="21 3 21 12 12 12" />
+      </svg>
+    </button>
+  `;
+
+  return `<main class="app">${header}${profile}${tabs}<div class="content">${list}</div>${modals}${fab}</main>`;
 }
 
+/* ---------- LISTAS ---------- */
 function Content(){
   const u = state.user;
   const d = state.data;
@@ -133,24 +155,37 @@ function Content(){
   return '';
 }
 
+/* Tarjeta clickable:
+   - NO se muestra el código.
+   - Abre modal con detalles y código grande. */
 function Card(x, isCupon=false){
+  const today = new Date();
+  const venc = isCupon && x.vence ? new Date(x.vence) : null;
+  const isVigente = isCupon ? (x.estado?.toLowerCase() === 'vigente' && (!venc || venc >= today)) : null;
+
   const tag = isCupon
-    ? (x.estado === 'Vigente' ? '<span class="tag ok">Vigente</span>' : '<span class="tag bad">Vencido</span>')
+    ? (isVigente ? '<span class="tag ok">Vigente</span>' : '<span class="tag bad">Vencido</span>')
     : '<span class="tag">Beneficio</span>';
-  const extra = isCupon ? `Vence: ${x.vence} • ${x.restricciones}` : x.descripcion;
+
+  const extra = isCupon
+    ? `Vence: ${x.vence} • ${x.restricciones}`
+    : x.descripcion;
+
   return `
-    <div class="card">
+    <div class="card" data-type="${isCupon?'cupon':'beneficio'}" data-code="${x.codigo}">
       <img src="${x.imagen}" alt="">
       <div>
         <div class="title">${x.titulo}</div>
-        <div class="code">${x.codigo} • ${tag}</div>
+        <div class="code">${tag}</div>
         <div class="desc">${extra}</div>
       </div>
     </div>
   `;
 }
 
+/* ---------------- Eventos & Modales ---------------- */
 function attachEvents(){
+  // login
   const btnLogin = document.getElementById('btnLogin');
   if(btnLogin){
     btnLogin.addEventListener('click', async () => {
@@ -178,51 +213,126 @@ function attachEvents(){
         lock.classList.remove('unlocking');
       }
     });
+    return; // no seguir si estamos en login
   }
 
+  // dropdown
   const menuBtn = document.getElementById('menuBtn');
   if(menuBtn){
     const dropdown = document.getElementById('dropdown');
     menuBtn.addEventListener('click', () => dropdown.classList.toggle('show'));
-
     document.addEventListener('click', (e)=>{
       if(!dropdown.contains(e.target) && e.target !== menuBtn) dropdown.classList.remove('show');
     });
-
     document.getElementById('logout').addEventListener('click', () => {
       state.user = null; state.tab = 'beneficios'; render();
     });
-
     document.getElementById('openConfig').addEventListener('click', () => {
       dropdown.classList.remove('show');
-      document.getElementById('backdrop').classList.add('open');
-      document.getElementById('configModal').classList.add('open');
+      openModal('configModal');
     });
-
-    const closeConfig = () => {
-      document.getElementById('backdrop').classList.remove('open');
-      document.getElementById('configModal').classList.remove('open');
-    };
-    document.getElementById('closeConfig').addEventListener('click', closeConfig);
-    document.getElementById('backdrop').addEventListener('click', closeConfig);
   }
 
+  // tabs
   document.querySelectorAll('.pill').forEach(el => {
     el.addEventListener('click', () => {
       state.tab = el.dataset.tab;
       document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
       el.classList.add('active');
       document.querySelector('.content').innerHTML = Content();
+      // reatachar clicks a cards
+      attachCardClicks();
     });
   });
 
-  const bigMovs = document.getElementById('bigMovs');
-  if(bigMovs){
-    bigMovs.addEventListener('click', () => {
-      state.tab = 'movimientos';
-      render();
+  // fab recargar
+  const refreshBtn = document.getElementById('refreshBtn');
+  if(refreshBtn){
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.classList.add('spin');
+      try{
+        const data = await DataAPI.loadMock(); // en real → DataAPI.getAsignaciones(state.user.dni)
+        state.data = data;
+        // Mantener tab actual
+        document.querySelector('.content').innerHTML = Content();
+        attachCardClicks();
+      }finally{
+        refreshBtn.classList.remove('spin');
+      }
     });
   }
+
+  // modales: cerrar
+  const backdrop = document.getElementById('backdrop');
+  const closeConfig = document.getElementById('closeConfig');
+  const closeItem = document.getElementById('closeItem');
+  if(backdrop) backdrop.addEventListener('click', closeAnyModal);
+  if(closeConfig) closeConfig.addEventListener('click', closeAnyModal);
+  if(closeItem) closeItem.addEventListener('click', closeAnyModal);
+
+  // clicks en cards (beneficios/cupones)
+  attachCardClicks();
 }
 
+function attachCardClicks(){
+  document.querySelectorAll('.card[data-code]').forEach(card=>{
+    card.addEventListener('click', () => {
+      openItem(card.dataset.type, card.dataset.code);
+    });
+  });
+}
+
+function openModal(id){
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+
+function closeAnyModal(){
+  document.getElementById('backdrop').classList.remove('open');
+  ['configModal','itemModal'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('open');
+  });
+}
+
+function openItem(type, code){
+  const isCupon = type === 'cupon';
+  const arr = isCupon ? state.data.cupones : state.data.beneficios;
+  const item = arr.find(x => x.codigo === code && x.dni === state.user.dni);
+  if(!item) return;
+
+  // Título
+  document.getElementById('itemTitle').textContent = item.titulo;
+
+  // Estado (solo cupones)
+  const st = document.getElementById('itemStatus');
+  st.innerHTML = '';
+  if(isCupon){
+    const today = new Date();
+    const venc = item.vence ? new Date(item.vence) : null;
+    const vigente = (item.estado?.toLowerCase() === 'vigente') && (!venc || venc >= today);
+    const span = document.createElement('span');
+    span.className = 'pill ' + (vigente ? 'vigente' : 'vencido');
+    span.textContent = vigente ? 'Vigente' : 'Cupón vencido';
+    st.appendChild(span);
+  }
+
+  // Código (visible SOLO en el modal)
+  const codeEl = document.getElementById('itemCode');
+  codeEl.textContent = item.codigo;
+  codeEl.onclick = async ()=> {
+    try{ await navigator.clipboard.writeText(item.codigo); 
+      const old = codeEl.textContent; codeEl.textContent = '¡Copiado! ' + old; 
+      setTimeout(()=> codeEl.textContent = old, 1200);
+    }catch{}
+  };
+
+  // Términos / condiciones (scroll propio)
+  const terms = item.terminos || item.restricciones || item.descripcion || '—';
+  document.getElementById('itemTerms').textContent = terms;
+
+  openModal('itemModal');
+}
+
+/* Init */
 render();
